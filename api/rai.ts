@@ -4,9 +4,6 @@ import { service, FORMAT_CONTENT_TYPE } from '../service/edge'
 
 module.exports = async (request: Request, response: Response) => {
   console.debug(`请求正文：${request.body}`)
-  let name = request.query['name'] ?? 'zh-CN-XiaoxiaoNeural'
-  let text = request.query["text"] ?? ""
-  let speed = request.query["speed"] ?? "0.00"
   let token = process.env.TOKEN
   if (token) {
     let authorization = request.headers['authorization']
@@ -25,14 +22,24 @@ module.exports = async (request: Request, response: Response) => {
     if (!FORMAT_CONTENT_TYPE.has(format)) {
       throw `无效的音频格式：${format}`
     }
-    let ssml =
-        `<speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="zh-CN">` +
-        `<voice name="${name}">` +
-        `<prosody rate="${speed}%">` +
-          text+
-        `</prosody>` +
-        `</voice>` +
-        `</speak>`
+    let _body={
+     name:"zh-CN-YunxiNeural",
+     text:""
+    };
+    try{
+      _body = JSON.parse(request.body);}
+    catch(e){
+      let _b_tmp=decodeURIComponent(request.body).split("&");
+
+     for(let i=0;i<_b_tmp.length;i++){
+      let _b=_b_tmp[i].split("=");
+      _body[_b[0]]=_b[1];
+     }
+    }
+    let ssml =`<speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="en-US"><voice name="${_body.name||'zh-CN-YunxiNeural'}">${_body.text}</voice ></speak >`;
+    if (ssml == null) {
+      throw `转换参数无效`
+    }
     let result = await retry(
       async () => {
         let result = await service.convert(ssml, format as string)
